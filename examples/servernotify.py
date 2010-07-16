@@ -54,6 +54,10 @@ def main():
     ## Now we select a server
     ts3.command('use', {'sid': ServerID})
 
+    ## You can auth you with the server. Example:
+    ## ts3.command('login', {'client_login_name': QueryLoginUsername,
+	##             'client_login_password': QueryLoginPasswort})
+
     ## After this we register events, which we can do with the function
     ## registerEvent(self, eventName, parameter={}, option=[])
     ts3.registerEvent('server')
