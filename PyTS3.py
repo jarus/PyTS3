@@ -81,7 +81,8 @@ class ServerQuery():
 		string = string.replace('\p','|')
 		string = string.replace('\n','')
 		string = string.replace('\r','')
-		return string
+		ustring = unicode( string, "utf-8")
+		return ustring
 	
 	def string2escaping(self, string):
 		"""
@@ -90,7 +91,7 @@ class ServerQuery():
 		@type string: str
 		@return: A string with escaping of TS3 Query.
 		"""
-		string = str(string)
+		string = string.encode("utf-8")
 		string = string.replace('/','\\/')
 		string = string.replace(' ','\\s')
 		string = string.replace('|','\\p')
