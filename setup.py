@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup( 
     name = "PyTS3", 
-    version = "$Rev$",
+    version = "$Rev: 12 $",
  	description = "PyTS3 is a little modul for Python, that you can better work with your TS3-Query in your Python projects."
     author = "Christoph Heer", 
     author_email = "Christoph.Heer@googlemail.com", 
