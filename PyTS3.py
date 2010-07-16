@@ -81,8 +81,12 @@ class ServerQuery():
 		string = string.replace('\p','|')
 		string = string.replace('\n','')
 		string = string.replace('\r','')
-		ustring = unicode( string, "utf-8")
-		return ustring
+		try:
+			string = int(string)
+			return string
+		except ValueError:
+			ustring = unicode( string, "utf-8")
+			return ustring
 	
 	def string2escaping(self, string):
 		"""
@@ -91,10 +95,13 @@ class ServerQuery():
 		@type string: str
 		@return: A string with escaping of TS3 Query.
 		"""
-		string = string.encode("utf-8")
-		string = string.replace('/','\\/')
-		string = string.replace(' ','\\s')
-		string = string.replace('|','\\p')
+		if type(string) == type(int()):
+			string = str(string)
+		else:
+			string = string.encode("utf-8")
+			string = string.replace('/','\\/')
+			string = string.replace(' ','\\s')
+			string = string.replace('|','\\p')
 		return string
 		
 	def command(self, cmd, parameter={}, option=[]):
@@ -139,7 +146,7 @@ class ServerQuery():
 		for m in statusParser:
 				status[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
 		
-		if status['id'] != "0":
+		if status['id'] != 0:
 			raise TS3Error(status['id'], status['msg'])
 			
 		return rinfo
