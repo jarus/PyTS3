@@ -23,6 +23,14 @@
 import telnetlib
 import re
 
+class TS3Error(Exception): 
+	def __init__(self, code, msg): 
+		self.code = code
+		self.msg = msg
+	
+	def __str__(self): 
+		return "ID %s (%s)" % (self.code, self.msg)
+
 class ServerQuery():
 	def __init__(self, ip='127.0.0.1', query=10011):
 		"""
@@ -35,7 +43,7 @@ class ServerQuery():
 		self.IP = ip
 		self.Query = int(query)
 		self.Timeout = 5.0
-		
+				
 	def connect(self):
 		"""
 		Open a link to the Teamspeak 3 query port
@@ -44,12 +52,12 @@ class ServerQuery():
 		try:
 			self.telnet = telnetlib.Telnet(self.IP, self.Query)
 		except telnetlib.socket.error:
-			return ('error', 10, 'Can not open a link on the port or IP')
+			raise TS3Error(10, 'Can not open a link on the port or IP')
 		output = self.telnet.read_until('TS3', self.Timeout)
 		if output.endswith('TS3') == False:
-			return ('error', 20, 'This is not a Teamspeak Server')
+			raise TS3Error(20, 'This is not a Teamspeak 3 Server')
 		else:
-			return ('error', 0, 'ok') 
+			return True
 
 	def disconnect(self):
 		"""
@@ -58,7 +66,7 @@ class ServerQuery():
 		"""
 		self.telnet.write('quit \n')
 		self.telnet.close()
-		return ('error', 0, 'ok')
+		return True
 		
 	def escaping2string(self, string):
 		"""
@@ -111,16 +119,26 @@ class ServerQuery():
 		data = data.split('error ')
 		status = data[1]
 		info = data[0].split('|')
-		rinfo = []
 		
-		for i in range(0,len(info)):
-			rinfo.append({}) 
-			infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[i], re.I)
+		if len(info) > 1:
+			rinfo = []
+			for i in range(0,len(info)):
+				rinfo.append({}) 
+				infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[i], re.I)
+				for m in infoParser:
+					rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+		else:
+			rinfo = {}
+			infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[0], re.I)
 			for m in infoParser:
-				rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+				rinfo[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
 		
 		statusParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", status, re.I)
 		status = {}
 		for m in statusParser:
 				status[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
-		return ('error', status['id'], status['msg'], status, rinfo) 
+		
+		if status['id'] != "0":
+			raise TS3Error(status['id'], status['msg'])
+			
+		return rinfo
