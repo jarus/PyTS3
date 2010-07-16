@@ -2,11 +2,10 @@ from distutils.core import setup
 
 setup(
     name="PyTS3",
-    version="$Rev: 21 $",
-    description="""PyTS3 is a little modul for Python, that you can better work
-    with your TS3-Query in your Python projects.""",
+    version="0.3",
+    description="""A python modul to use the Teamspeak Query Interface.""",
     author="Christoph Heer",
     author_email="Christoph.Heer@googlemail.com",
     license="MIT License",
-    url="http://redmine.thelabmill.de",
+    url="http://bitbucket.org/ChristophHeer/pyts3/",
     py_modules=["PyTS3"])
