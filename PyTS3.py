@@ -43,6 +43,7 @@ class ServerQuery():
 		self.IP = ip
 		self.Query = int(query)
 		self.Timeout = 5.0
+		self.TSRegex = re.compile(r"(\w+)=(.*?)(\s|$|\|)")
 				
 	def connect(self):
 		"""
@@ -81,6 +82,7 @@ class ServerQuery():
 		string = string.replace('\p','|')
 		string = string.replace('\n','')
 		string = string.replace('\r','')
+		#string = string.replace('\n\r', '')
 		try:
 			string = int(string)
 			return string
@@ -123,39 +125,32 @@ class ServerQuery():
 		telnetCMD += '\n'
 		self.telnet.write(telnetCMD)
 		
-		data = self.telnet.read_until("msg=ok", self.Timeout)
-		data = data.split('error')
-		status = data[1]
-		info = data[0].replace('\n\r', '').split('|')
+		telnetResponse = self.telnet.read_until("msg=ok", self.Timeout)
+		telnetResponse = telnetResponse.split('error')
+		notParsedCMDStatus = telnetResponse[1]
+		notParsedInfo = telnetResponse[0].split('|')
 		
-		regString = r"(\w+)=(.*?)(\s|$|\|)"
-		if cmd.endswith("list") == True:
-			rinfo = []
-			for i in range(0,len(info)):
-				rinfo.append({}) 
-				infoParser = re.finditer(regString, info[i], re.I)
-				for m in infoParser:
-					rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
-		
-		elif len(info) > 1:
-			rinfo = []
-			for i in range(0,len(info)):
-				rinfo.append({}) 
-				infoParser = re.finditer(regString, info[i], re.I)
-				for m in infoParser:
-					rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+		if (cmd.endswith("list") == True) or (len(notParsedInfo) > 1):
+			returnInfo = []
+			for notParsedInfoLine in notParsedInfo:
+				ParsedInfo = self.TSRegex.findall(notParsedInfoLine)
+				ParsedInfoDict = {}
+				for ParsedInfoKey in ParsedInfo:
+					ParsedInfoDict[ParsedInfoKey[0]] = self.escaping2string(ParsedInfoKey[1])
+				returnInfo.append(ParsedInfoDict)
+				
 		else:
-			rinfo = {}
-			infoParser = re.finditer(regString, info[0], re.I)
-			for m in infoParser:
-				rinfo[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+			returnInfo = {}
+			ParsedInfo = self.TSRegex.findall(notParsedInfo[0])
+			for ParsedInfoKey in ParsedInfo:
+				returnInfo[ParsedInfoKey[0]] = self.escaping2string(ParsedInfoKey[1])
 
-		statusParser = re.finditer(regString, status, re.I)
-		status = {}
-		for m in statusParser:
-				status[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+		ReturnCMDStatus = {}
+		ParsedCMDStatus = self.TSRegex.findall(notParsedCMDStatus)
+		for ParsedCMDStatusLine in ParsedCMDStatus:
+			ReturnCMDStatus[ParsedCMDStatusLine[0]] = self.escaping2string(ParsedCMDStatusLine[1])
 		
-		if status['id'] != 0:
-			raise TS3Error(status['id'], status['msg'])
+		if ReturnCMDStatus['id'] != 0:
+			raise TS3Error(ReturnCMDStatus['id'], ReturnCMDStatus['msg'])	
 			
-		return rinfo
+		return returnInfo
