@@ -128,7 +128,7 @@ class ServerQuery():
 		status = data[1]
 		info = data[0].replace('\n\r', '').split('|')
 		
-		regString = r"(\w+)=(.*?)(\s)"
+		regString = r"(\w+)=(.*?)(\s|$|\|)"
 		if cmd.endswith("list") == True:
 			rinfo = []
 			for i in range(0,len(info)):
