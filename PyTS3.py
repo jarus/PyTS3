@@ -22,6 +22,8 @@
 
 import telnetlib
 import re
+import thread
+import time
 
 class TS3Error(Exception): 
 	def __init__(self, code, msg): 
@@ -153,3 +155,56 @@ class ServerQuery():
 			raise TS3Error(ReturnCMDStatus['id'], ReturnCMDStatus['msg'])	
 			
 		return returnInfo
+		
+class ServerNotification(ServerQuery):
+	def __init__(self, ip='127.0.0.1', query=10011):
+		"""
+		This class contains functions to work with the ServerNotification of TS3.
+		@param ip: IP adress of the TS3 Server
+		@type ip: str
+		@param query: Query Port of the TS3 Server. Default 10011
+		@type query: int
+		"""
+		self.IP = ip
+		self.Query = int(query)
+		self.Timeout = 5.0
+		self.TSRegex = re.compile(r"(\w+)=(.*?)(\s|$|\|)")
+		
+		self.Lock = thread.allocate_lock()
+		self.WorkerFunc = []
+		thread.start_new_thread(self.worker, ())
+		
+	def worker(self):		
+		while True:
+			self.Lock.acquire()
+			WorkerFunc = self.WorkerFunc
+			self.Lock.release()
+			if len(WorkerFunc) == 0:
+				continue
+			
+			telnetResponse = self.telnet.read_until("\n", 0.1)
+			if telnetResponse.startswith('notify'):
+				notifyName = telnetResponse.split(' ')[0]
+				ParsedInfo = self.TSRegex.findall(telnetResponse)
+				notifyData = {}
+				for ParsedInfoKey in ParsedInfo:
+					notifyData[ParsedInfoKey[0]] = self.escaping2string(ParsedInfoKey[1])	
+				for func in WorkerFunc:
+					func(notifyName, notifyData)
+			time.sleep(0.2)
+
+	def register(self, func, events=[]):		
+		for event in events:
+			self.command('servernotifyregister', event)
+			
+		self.Lock.acquire()
+		self.WorkerFunc.append(func)
+		self.Lock.release()
+		
+	def unregister(self, func, events=[]):
+		for event in events:
+			self.command('servernotifyunregister', event)
+
+		self.Lock.acquire()
+		self.WorkerFunc.remove(func)
+		self.Lock.release()
