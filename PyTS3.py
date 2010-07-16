@@ -124,35 +124,36 @@ class ServerQuery():
 		self.telnet.write(telnetCMD)
 		
 		data = self.telnet.read_until("msg=ok", self.Timeout)
-		data = data.split('error ')
+		data = data.split('error')
 		status = data[1]
 		info = data[0].split('|')
 		
+		regString = r"(\s{1})(\w+)=(.*?)(\s)"
 		if cmd.endswith("list") == True:
 			rinfo = []
 			for i in range(0,len(info)):
 				rinfo.append({}) 
-				infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[i], re.I)
+				infoParser = re.finditer(regString, info[i], re.I)
 				for m in infoParser:
-					rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
-		else:
-			if len(info) > 1:
-				rinfo = []
-				for i in range(0,len(info)):
-					rinfo.append({}) 
-					infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[i], re.I)
-					for m in infoParser:
-						rinfo[i][self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
-			else:
-				rinfo = {}
-				infoParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", info[0], re.I)
-				for m in infoParser:
-					rinfo[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+					rinfo[i][self.escaping2string(m.group(2))] = self.escaping2string(m.group(3))
 		
-		statusParser = re.finditer(r"(.*?)=(.*?)(\Z|\s)", status, re.I)
+		elif len(info) > 1:
+			rinfo = []
+			for i in range(0,len(info)):
+				rinfo.append({}) 
+				infoParser = re.finditer(regString, info[i], re.I)
+				for m in infoParser:
+					rinfo[i][self.escaping2string(m.group(2))] = self.escaping2string(m.group(3))
+		else:
+			rinfo = {}
+			infoParser = re.finditer(regString, info[0], re.I)
+			for m in infoParser:
+				rinfo[self.escaping2string(m.group(2))] = self.escaping2string(m.group(3))
+
+		statusParser = re.finditer(regString, status, re.I)
 		status = {}
 		for m in statusParser:
-				status[self.escaping2string(m.group(1))] = self.escaping2string(m.group(2))
+				status[self.escaping2string(m.group(2))] = self.escaping2string(m.group(3))
 		
 		if status['id'] != 0:
 			raise TS3Error(status['id'], status['msg'])
