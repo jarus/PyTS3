@@ -34,6 +34,7 @@ class TS3Error(Exception):
 		return "ID %s (%s)" % (self.code, self.msg)
 
 class ServerQuery():
+	TSRegex = re.compile(r"(\w+)=(.*?)(\s|$|\|)")
 	def __init__(self, ip='127.0.0.1', query=10011):
 		"""
 		This class contains functions to connecting a TS3 Query Port and send command.
@@ -45,7 +46,6 @@ class ServerQuery():
 		self.IP = ip
 		self.Query = int(query)
 		self.Timeout = 5.0
-		self.TSRegex = re.compile(r"(\w+)=(.*?)(\s|$|\|)")
 				
 	def connect(self):
 		"""
@@ -168,20 +168,26 @@ class ServerNotification(ServerQuery):
 		self.IP = ip
 		self.Query = int(query)
 		self.Timeout = 5.0
-		self.TSRegex = re.compile(r"(\w+)=(.*?)(\s|$|\|)")
+		self.LastCommand = 0
 		
 		self.Lock = thread.allocate_lock()
-		self.WorkerFunc = []
+		self.RegistedNotifys = []
+		self.RegistedEvents = []
 		thread.start_new_thread(self.worker, ())
 		
 	def worker(self):		
 		while True:
 			self.Lock.acquire()
-			WorkerFunc = self.WorkerFunc
+			RegistedNotifys = self.RegistedNotifys
+			LastCommand = self.LastCommand
 			self.Lock.release()
-			if len(WorkerFunc) == 0:
+			if len(RegistedNotifys) == 0:
 				continue
-			
+			if LastCommand < time.time() - 180:
+				self.command('version')
+				self.Lock.acquire()
+				self.LastCommand = time.time()
+				self.Lock.release()
 			telnetResponse = self.telnet.read_until("\n", 0.1)
 			if telnetResponse.startswith('notify'):
 				notifyName = telnetResponse.split(' ')[0]
@@ -189,22 +195,36 @@ class ServerNotification(ServerQuery):
 				notifyData = {}
 				for ParsedInfoKey in ParsedInfo:
 					notifyData[ParsedInfoKey[0]] = self.escaping2string(ParsedInfoKey[1])	
-				for func in WorkerFunc:
-					func(notifyName, notifyData)
+				for RegistedNotify in RegistedNotifys:
+					if RegistedNotify['notify'] == notifyName:
+						RegistedNotify['func'](notifyName, notifyData)
 			time.sleep(0.2)
 
-	def register(self, func, events=[]):		
-		for event in events:
-			self.command('servernotifyregister', event)
-			
+	def registerNotify(self, notify, func):	
+		notify2func = {'notify': notify, 'func': func}
+		
 		self.Lock.acquire()
-		self.WorkerFunc.append(func)
+		self.RegistedNotifys.append(notify2func)
+		self.LastCommand = time.time()
 		self.Lock.release()
 		
-	def unregister(self, func, events=[]):
-		for event in events:
-			self.command('servernotifyunregister', event)
-
+	def unregisterNotify(self, notify, func):
+		notify2func = {'notify': notify, 'func': func}
+		
 		self.Lock.acquire()
-		self.WorkerFunc.remove(func)
+		self.RegistedNotifys.remove(notify2func)
+		self.LastCommand = time.time()
 		self.Lock.release()
+		
+	def registerEvent(self, eventName, parameter={}, option=[]):
+		parameter['event'] = eventName
+		self.RegistedEvents.append(eventName)
+		self.command('servernotifyregister', parameter, option)
+		self.Lock.acquire()
+		self.LastCommand = time.time()
+		self.Lock.release()
+		
+	def unregisterEvent(self):
+		self.command('servernotifyunregister')
+		
+	
