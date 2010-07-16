@@ -126,8 +126,9 @@ class ServerQuery():
 		self.telnet.write(telnetCMD)
 		
 		telnetResponse = self.telnet.read_until("msg=ok", self.Timeout)
-		telnetResponse = telnetResponse.split('error')
-		notParsedCMDStatus = telnetResponse[1]
+		telnetResponse = telnetResponse.split(r'error id=')
+		notParsedCMDStatus = "id=" + telnetResponse[1]
+		print notParsedCMDStatus
 		notParsedInfo = telnetResponse[0].split('|')
 		
 		if (cmd.endswith("list") == True) or (len(notParsedInfo) > 1):
@@ -149,7 +150,7 @@ class ServerQuery():
 		ParsedCMDStatus = self.TSRegex.findall(notParsedCMDStatus)
 		for ParsedCMDStatusLine in ParsedCMDStatus:
 			ReturnCMDStatus[ParsedCMDStatusLine[0]] = self.escaping2string(ParsedCMDStatusLine[1])
-		
+		print ReturnCMDStatus
 		if ReturnCMDStatus['id'] != 0:
 			raise TS3Error(ReturnCMDStatus['id'], ReturnCMDStatus['msg'])	
 			
