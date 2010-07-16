@@ -51,7 +51,7 @@ class ServerQuery():
 		@return: A tulpe with a error code. Example: ('error', 0, 'ok')
 		"""
 		try:
-			self.telnet = telnetlib.Telnet(self.IP, self.Query, self.Timeout)
+			self.telnet = telnetlib.Telnet(self.IP, self.Query)
 		except telnetlib.socket.error:
 			raise TS3Error(10, 'Can not open a link on the port or IP')
 		output = self.telnet.read_until('TS3', self.Timeout)
